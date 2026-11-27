@@ -102,6 +102,15 @@ class DummyComputeBackendMonitorTask(PeriodicBaseTask):
         # before the parcel it completes is visible as Assigned
         transformation_db: Annotated[TransformationDB, NoTransaction()],
     ) -> int:
+        """Claim unassigned compute parcels, submit them and schedule their completion.
+
+        Args:
+            transformation_db: Transformation database, whose transaction is
+                managed here.
+
+        Returns:
+            The number of parcels submitted.
+        """
         async with transformation_db:
             # The oldest first: the parcel identifier is a UUIDv7, so key
             # order is creation order, the order the dispatcher claims in
@@ -181,9 +190,23 @@ class DummyComputeBackendTask(BaseTask):
 
     @property
     def execution_locks(self) -> list[BaseLock]:
+        """Return a mutex on the parcel, so it is completed by one run at a time.
+
+        Returns:
+            A mutex lock for the parcel.
+        """
         return [MutexLock(PARCEL, self.parcel_id)]
 
     async def execute(self, transformation_db: TransformationDB) -> bool:
+        """Move the parcel from ``Assigned`` to ``Done``.
+
+        Args:
+            transformation_db: Transformation database.
+
+        Returns:
+            True if the parcel was completed, False if it was no longer
+            ``Assigned`` and was skipped.
+        """
         parcel_id = UUID(self.parcel_id)
         logger.info("Simulating the completion of parcel %s", parcel_id)
         # The backend reports the work finished...

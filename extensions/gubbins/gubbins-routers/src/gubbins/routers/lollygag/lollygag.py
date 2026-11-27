@@ -1,5 +1,6 @@
 """This router makes use of the new LollygagDB.
-It uses the the Lollygag AccessPolicy (which itself requires the Gubbins property)
+
+It uses the Lollygag AccessPolicy (which itself requires the Gubbins property).
 """
 
 from __future__ import annotations
@@ -26,6 +27,18 @@ async def insert_owner_object(
     owner_name: str,
     check_permission: CheckLollygagPolicyCallable,
 ):
+    """Insert an owner.
+
+    \f
+
+    Args:
+        lollygag_db: Lollygag database.
+        owner_name: Name of the owner.
+        check_permission: Checks that the user may create objects.
+
+    Returns:
+        The ID of the new owner.
+    """
     await check_permission(action=ActionType.CREATE)
     return await insert_owner_object_bl(lollygag_db, owner_name)
 
@@ -35,6 +48,17 @@ async def get_owner_object(
     lollygag_db: LollygagDB,
     check_permission: CheckLollygagPolicyCallable,
 ):
+    """Get the names of all the owners.
+
+    \f
+
+    Args:
+        lollygag_db: Lollygag database.
+        check_permission: Checks that the user may read objects.
+
+    Returns:
+        The owner names.
+    """
     await check_permission(action=ActionType.READ)
     return await get_owner_object_bl(lollygag_db)
 
@@ -44,6 +68,17 @@ async def get_gubbins_secrets(
     lollygag_db: LollygagDB,
     check_permission: CheckLollygagPolicyCallable,
 ):
-    """Does nothing but expects a GUBBINS_SENSEI permission"""
+    """Does nothing but expects a GUBBINS_SENSEI permission.
+
+    \f
+
+    Args:
+        lollygag_db: Lollygag database.
+        check_permission: Checks that the user may manage objects, which
+            requires the ``GUBBINS_SENSEI`` property.
+
+    Returns:
+        The owner names.
+    """
     await check_permission(action=ActionType.MANAGE)
     return await get_gubbins_secrets_bl(lollygag_db)

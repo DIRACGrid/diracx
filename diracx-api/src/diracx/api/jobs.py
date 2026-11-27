@@ -1,3 +1,5 @@
+"""Convenience helpers for creating and downloading job sandboxes."""
+
 from __future__ import annotations
 
 __all__ = ["create_sandbox", "download_sandbox"]
@@ -30,6 +32,12 @@ def tarfile_open(fileobj: BinaryIO):
     """Context manager to extend tarfile.open to support reading zstd compressed files.
 
     This is only needed for Python <=3.13.
+
+    Args:
+        fileobj: Open binary file containing a tar archive, optionally zstd-compressed.
+
+    Yields:
+        Open tar archive for reading.
     """
     # Save current position and read magic bytes
     current_pos = fileobj.tell()
@@ -54,6 +62,13 @@ async def create_sandbox(paths: list[Path], *, client: AsyncDiracClient) -> str:
     Any paths that are directories will be added recursively.
     The returned value is the PFN of the sandbox in the storage backend and can
     be used to submit jobs.
+
+    Args:
+        paths: Files and directories to include in the sandbox archive.
+        client: Authenticated DiracX client used to request and upload the sandbox.
+
+    Returns:
+        Physical file name of the uploaded or already-existing sandbox.
     """
     with tempfile.TemporaryFile(mode="w+b") as tar_fh:
         # Create zstd compressed tar with level 18 and long matching enabled
@@ -107,7 +122,13 @@ async def create_sandbox(paths: list[Path], *, client: AsyncDiracClient) -> str:
 
 @with_client
 async def download_sandbox(pfn: str, destination: Path, *, client: AsyncDiracClient):
-    """Download a sandbox from the storage backend to the given destination."""
+    """Download and extract a sandbox into the destination directory.
+
+    Args:
+        pfn: Physical file name identifying the sandbox to download.
+        destination: Directory where the archive contents are extracted.
+        client: Authenticated DiracX client used to request the download URL.
+    """
     res = await client.jobs.get_sandbox_file(pfn=pfn)
     logger.debug("Downloading sandbox for %s", pfn)
     with tempfile.TemporaryFile(mode="w+b") as fh:

@@ -138,8 +138,6 @@ jobs:
           environments: ${{ matrix.package }}
       - name: Run pytest
         run: pixi run pytest-${{ matrix.package }} --cov-report=xml:coverage.xml --junitxml=report.xml
-      - name: Upload coverage report
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
 
   pytest-integration:
     needs: resolve-deps
@@ -298,10 +296,6 @@ jobs:
       - name: Collect demo coverage
         run: |
           pixi run -e ${{ matrix.extension == 'diracx' && 'default' || 'default-gubbins' }} python -m diracx.testing coverage collect-demo --demo-dir=../diracx-charts/.demo
-      - name: Upload coverage report
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        with:
-          files: ./coverage-pytest.xml,./coverage-demo.xml
 
   client-generation:
     runs-on: ubuntu-latest
@@ -328,9 +322,8 @@ jobs:
 
   pre-commit:
     # Runs all the pre-commit-stage hooks (anything not marked
-    # stages: [manual] in .pre-commit-config.yaml) and auto-fixes PRs via
-    # pre-commit-ci/lite-action. Replaces the pre-commit.ci app: hook rev
-    # updates come from Renovate's pre-commit manager instead.
+    # stages: [manual] in .pre-commit-config.yaml). Hook rev updates come
+    # from Renovate's pre-commit manager.
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -340,9 +333,11 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: 3.x
-      - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
-      - uses: pre-commit-ci/lite-action@062bca0919bc9d6e66755cc05074b70c77e111fc # v1.2.0
-        if: always()
+      # Not pre-commit/action: it calls actions/cache by tag, which the organization policy rejects.
+      - name: Install pre-commit
+        run: pip install pre-commit==4.7.0
+      - name: Run pre-commit
+        run: pre-commit run --all-files --show-diff-on-failure --color=always
 
   pre-commit-pixi-hooks:
     # Runs the pixi-dependent local hooks (stages: [manual] in

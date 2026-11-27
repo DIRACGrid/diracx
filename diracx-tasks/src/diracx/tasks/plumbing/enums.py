@@ -1,3 +1,5 @@
+"""Enumerations describing how tasks are routed to workers."""
+
 from __future__ import annotations
 
 from enum import StrEnum

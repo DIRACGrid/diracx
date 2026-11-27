@@ -1,3 +1,5 @@
+"""Callback groups: run a task once a set of child tasks has completed."""
+
 from __future__ import annotations
 
 import asyncio
@@ -36,9 +38,18 @@ async def spawn_with_callback(
 
     All keys get a TTL for automatic cleanup.
 
+    Args:
+        children: Tasks to schedule.
+        callback: Task scheduled once all children have completed.
+        redis: Redis client used to store the group state.
+        ttl_seconds: Time to live of the group keys, in seconds.
+
     Returns:
         The group_id for this callback group.
 
+    Raises:
+        RuntimeError: If tasks are not bound to a broker.
+        ValueError: If the callback task is not in the broker registry.
     """
     group_id = uuid.uuid4().hex
 
@@ -86,10 +97,20 @@ async def on_child_complete(
     *,
     ttl_seconds: int = 86400,
 ) -> bool:
-    """Record a child's completion. Returns True if the callback should fire.
+    """Record a child's completion.
 
     Called by the worker after a child task (one with ``group_id`` in labels)
     completes.
+
+    Args:
+        redis: Redis client holding the group state.
+        group_id: ID of the callback group.
+        child_task_id: ID of the completed child task.
+        result: Return value of the child task.
+        ttl_seconds: Time to live of the stored result, in seconds.
+
+    Returns:
+        True if all children have completed and the callback should fire.
     """
     # Store child result
     result_data = msgpack.packb(result, datetime=True)
@@ -114,6 +135,11 @@ async def fire_callback(
     Called by the worker when ``on_child_complete`` returns True.
     Reads the callback data from Redis and submits the task to the
     broker for execution.
+
+    Args:
+        redis: Redis client holding the group state.
+        group_id: ID of the callback group.
+        broker: Broker the callback task is submitted to.
     """
     from .broker.models import submit_task
 

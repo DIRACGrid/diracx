@@ -1,3 +1,5 @@
+"""Example database managing pilot submissions to compute elements."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -19,6 +21,15 @@ class MyPilotDB(BaseSQLDB):
     async def add_ce(
         self, name: str, capacity: int, success_rate: float, enabled: bool = True
     ) -> None:
+        """Add a compute element.
+
+        Args:
+            name: Name of the compute element.
+            capacity: Maximum number of active pilots.
+            success_rate: Reliability of the compute element, as the
+                probability (0.0 to 1.0) that a pilot succeeds.
+            enabled: Whether pilots can be submitted to the compute element.
+        """
         stmt = insert(MyComputeElements).values(
             name=name, capacity=capacity, success_rate=success_rate, enabled=enabled
         )
@@ -26,6 +37,13 @@ class MyPilotDB(BaseSQLDB):
 
     # --8<-- [start:my_pilot_db_get_available_ces]
     async def get_available_ces(self) -> list[dict]:
+        """List the enabled compute elements with free capacity.
+
+        Returns:
+            For each compute element, its name, capacity, success rate and
+            number of available slots (capacity minus submitted and running
+            pilots).
+        """
         active_counts = (
             select(
                 MyPilotSubmissions.ce_name,
@@ -71,6 +89,14 @@ class MyPilotDB(BaseSQLDB):
     # --8<-- [end:my_pilot_db_get_available_ces]
 
     async def submit_pilot(self, ce_name: str) -> int:
+        """Record the submission of a pilot to a compute element.
+
+        Args:
+            ce_name: Name of the compute element.
+
+        Returns:
+            The ID of the new pilot submission.
+        """
         stmt = insert(MyPilotSubmissions).values(
             ce_name=ce_name,
             status=MyPilotStatus.SUBMITTED,
@@ -79,6 +105,12 @@ class MyPilotDB(BaseSQLDB):
         return result.lastrowid
 
     async def update_pilot_status(self, pilot_id: int, status: MyPilotStatus) -> None:
+        """Set the status of a pilot and record the time of the update.
+
+        Args:
+            pilot_id: ID of the pilot submission.
+            status: New status of the pilot.
+        """
         stmt = (
             update(MyPilotSubmissions)
             .where(MyPilotSubmissions.pilot_id == pilot_id)
@@ -90,6 +122,15 @@ class MyPilotDB(BaseSQLDB):
         await self.conn.execute(stmt)
 
     async def get_pilots_by_status(self, status: MyPilotStatus) -> list[dict]:
+        """List the pilots having a given status.
+
+        Args:
+            status: Status to select.
+
+        Returns:
+            For each pilot, its ID, compute element name, status and
+            submission time.
+        """
         stmt = select(
             MyPilotSubmissions.pilot_id.label("pilot_id"),
             MyPilotSubmissions.ce_name.label("ce_name"),
@@ -108,6 +149,14 @@ class MyPilotDB(BaseSQLDB):
         ]
 
     async def get_ce_success_rate(self, ce_name: str) -> float:
+        """Get the success rate of a compute element.
+
+        Args:
+            ce_name: Name of the compute element.
+
+        Returns:
+            The success rate of the compute element.
+        """
         stmt = select(MyComputeElements.success_rate).where(
             MyComputeElements.name == ce_name
         )
@@ -116,6 +165,11 @@ class MyPilotDB(BaseSQLDB):
         return row[0]
 
     async def get_pilot_summary(self) -> dict[str, int]:
+        """Count the pilots by status.
+
+        Returns:
+            The number of pilots for each status.
+        """
         stmt = select(
             MyPilotSubmissions.status.label("status"),
             func.count().label("total"),

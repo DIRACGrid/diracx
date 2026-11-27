@@ -1,3 +1,5 @@
+"""Dependencies of the Gubbins routers."""
+
 from __future__ import annotations
 
 __all__ = ["Config"]

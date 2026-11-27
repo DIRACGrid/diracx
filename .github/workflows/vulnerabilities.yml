@@ -26,6 +26,10 @@ jobs:
         with:
           image-ref: "ghcr.io/diracgrid/diracx/client:dev"
           format: "sarif"
+          # Report only what can be acted on: serious findings that have a fix.
+          severity: "CRITICAL,HIGH"
+          limit-severities-for-sarif: true
+          ignore-unfixed: true
           output: "client-dev-vulnerability-report.sarif"
 
       - name: Upload SARIF to GitHub Security (client:dev)
@@ -39,6 +43,10 @@ jobs:
         with:
           image-ref: "ghcr.io/diracgrid/diracx/services:dev"
           format: "sarif"
+          # Report only what can be acted on: serious findings that have a fix.
+          severity: "CRITICAL,HIGH"
+          limit-severities-for-sarif: true
+          ignore-unfixed: true
           output: "services-dev-vulnerability-report.sarif"
           skip-setup-trivy: true
 
@@ -65,6 +73,10 @@ jobs:
         with:
           image-ref: "ghcr.io/diracgrid/diracx/client:${{ steps.get-latest-tag.outputs.latest_tag }}"
           format: "sarif"
+          # Report only what can be acted on: serious findings that have a fix.
+          severity: "CRITICAL,HIGH"
+          limit-severities-for-sarif: true
+          ignore-unfixed: true
           output: "client-rel-vulnerability-report.sarif"
           skip-setup-trivy: true
 
@@ -81,6 +93,10 @@ jobs:
         with:
           image-ref: "ghcr.io/diracgrid/diracx/services:${{ steps.get-latest-tag.outputs.latest_tag }}"
           format: "sarif"
+          # Report only what can be acted on: serious findings that have a fix.
+          severity: "CRITICAL,HIGH"
+          limit-severities-for-sarif: true
+          ignore-unfixed: true
           output: "services-rel-vulnerability-report.sarif"
           skip-setup-trivy: true
 

@@ -242,7 +242,9 @@ class WellKnownOperations:
     async def get_installation_metadata(self, **kwargs: Any) -> _models.ExtendedMetadata:
         """Get Installation Metadata.
 
-        Get Installation Metadata.
+        Return the metadata of the installation, extended with Gubbins information.
+
+        This overwrites the ``dirac-metadata`` endpoint of DiracX.
 
         :return: ExtendedMetadata
         :rtype: ~_generated.models.ExtendedMetadata
@@ -2345,7 +2347,7 @@ class LollygagOperations:
     async def insert_owner_object(self, owner_name: str, **kwargs: Any) -> Any:
         """Insert Owner Object.
 
-        Insert Owner Object.
+        Insert an owner.
 
         :param owner_name: Required.
         :type owner_name: str
@@ -2395,7 +2397,7 @@ class LollygagOperations:
     async def get_owner_object(self, **kwargs: Any) -> Any:
         """Get Owner Object.
 
-        Get Owner Object.
+        Get the names of all the owners.
 
         :return: any
         :rtype: any
@@ -2509,7 +2511,7 @@ class MyOperations:
     async def pilots_submit_pilot(self, ce_name: str, **kwargs: Any) -> dict[str, Any]:
         """Submit Pilot.
 
-        Submit Pilot.
+        Submit a pilot to a compute element.
 
         :param ce_name: Required.
         :type ce_name: str
@@ -2559,7 +2561,7 @@ class MyOperations:
     async def pilots_get_pilot_summary(self, **kwargs: Any) -> dict[str, int]:
         """Get Pilot Summary.
 
-        Get Pilot Summary.
+        Get the number of pilots by status.
 
         :return: dict mapping str to int
         :rtype: dict[str, int]
