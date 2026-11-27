@@ -29,6 +29,7 @@ from joserfc.jwk import KeySet, KeySetSerialization
 from pydantic import (
     AnyUrl,
     BeforeValidator,
+    DirectoryPath,
     Field,
     FileUrl,
     PrivateAttr,
@@ -485,6 +486,22 @@ class OTELSettings(ServiceSettingsBase):
     used with the ``http`` protocol. ``/v1/traces``, ``/v1/metrics`` and ``/v1/logs``
     are appended to it. The scheme (``http`` or ``https``) decides whether TLS is used.
     """
+
+    ca_path: DirectoryPath | None = None
+    """
+    OpenSSL-hashed directory (see ``openssl rehash``) of the PEM CA certificates used
+    to verify the collector, instead of the system ones. It takes precedence over
+    ``OTEL_EXPORTER_OTLP_CERTIFICATE``, ``REQUESTS_CA_BUNDLE`` and ``CURL_CA_BUNDLE``.
+    With ``grpc``, setting it enables TLS regardless of ``grpc_insecure``, the
+    certificates are read once at startup, and the standard OTLP client certificate
+    variables are not used. An empty value is the same as not setting it.
+    """
+
+    @field_validator("ca_path", mode="before")
+    @classmethod
+    def _empty_ca_path_is_unset(cls, value: Any) -> Any:
+        # Otherwise an empty environment variable is the current directory
+        return None if value == "" else value
 
     headers: dict[str, str] | None = None
     """

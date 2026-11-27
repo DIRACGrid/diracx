@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 
 # https://opentelemetry.io/blog/2023/logs-collection/
 # https://github.com/mhausenblas/ref.otel.help/blob/main/how-to/logs-collection/yoda/main.py
@@ -36,6 +38,9 @@ from diracx.core.logs import (
 from diracx.core.settings import OTELSettings
 
 logger = logging.getLogger(__name__)
+
+# Name given to a certificate by ``openssl rehash``: subject hash and a counter
+_HASHED_CERTIFICATE_NAME = re.compile(r"[0-9a-f]{8}\.\d+")
 
 
 @dataclass(frozen=True)
@@ -181,10 +186,28 @@ def _create_exporters(
         def url(signal: str) -> str | None:
             return f"{base_url}/v1/{signal}" if base_url else None
 
+        http_kwargs: dict = {"headers": settings.headers}
+        ca_path = settings.ca_path
+        if ca_path and base_url.startswith("http://"):
+            logger.warning(
+                "DIRACX_OTEL_CA_PATH is ignored as %s does not use TLS", base_url
+            )
+            ca_path = None
+        if ca_path:
+            # Fail at startup, as with gRPC, rather than at each export
+            _ca_bundle(ca_path)
+            # requests accepts an OpenSSL-hashed directory as CA path
+            http_kwargs["certificate_file"] = str(ca_path)
         return (
-            HTTPSpanExporter(endpoint=url("traces"), headers=settings.headers),
-            HTTPMetricExporter(endpoint=url("metrics"), headers=settings.headers),
-            HTTPLogExporter(endpoint=url("logs"), headers=settings.headers),
+            HTTPSpanExporter(
+                endpoint=url("traces"), session=_ca_session(ca_path), **http_kwargs
+            ),
+            HTTPMetricExporter(
+                endpoint=url("metrics"), session=_ca_session(ca_path), **http_kwargs
+            ),
+            HTTPLogExporter(
+                endpoint=url("logs"), session=_ca_session(ca_path), **http_kwargs
+            ),
         )
 
     from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
@@ -193,15 +216,79 @@ def _create_exporters(
     )
     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
-    endpoint = settings.grpc_endpoint or None
+    kwargs: dict = {
+        "endpoint": settings.grpc_endpoint or None,
+        "insecure": settings.grpc_insecure,
+        "headers": settings.headers,
+    }
+    if settings.ca_path:
+        from grpc import ssl_channel_credentials
+
+        # gRPC only takes a CA bundle, so we build one from the directory
+        kwargs["insecure"] = False
+        kwargs["credentials"] = ssl_channel_credentials(_ca_bundle(settings.ca_path))
     return (
-        OTLPSpanExporter(
-            endpoint=endpoint, insecure=settings.grpc_insecure, headers=settings.headers
-        ),
-        OTLPMetricExporter(
-            endpoint=endpoint, insecure=settings.grpc_insecure, headers=settings.headers
-        ),
-        OTLPLogExporter(
-            endpoint=endpoint, insecure=settings.grpc_insecure, headers=settings.headers
-        ),
+        OTLPSpanExporter(**kwargs),
+        OTLPMetricExporter(**kwargs),
+        OTLPLogExporter(**kwargs),
     )
+
+
+def _ca_session(ca_path: Path | None):
+    """Return the requests session of an HTTP exporter, if ``ca_path`` needs one.
+
+    requests lets ``REQUESTS_CA_BUNDLE`` and ``CURL_CA_BUNDLE`` take precedence
+    over the CA path of a session, so that ``ca_path`` would be silently ignored
+    wherever one of them is set for the other clients of the process.
+    """
+    if not ca_path:
+        return None
+
+    import requests
+
+    ca = str(ca_path)
+
+    class CAPathSession(requests.Session):
+        def merge_environment_settings(self, url, proxies, stream, verify, cert):
+            merged = super().merge_environment_settings(
+                url, proxies, stream, verify, cert
+            )
+            # Not self.verify: the exporters only set it from version 1.45
+            merged["verify"] = ca
+            return merged
+
+    return CAPathSession()
+
+
+def _ca_bundle(ca_path: Path) -> bytes:
+    """Concatenate the certificates of an OpenSSL-hashed CA directory.
+
+    The files are parsed, as gRPC stops reading a bundle at the first block it
+    cannot load: the ones which are not PEM certificates are skipped.
+
+    Raises:
+        ValueError: If the directory cannot be read, or has no PEM certificate
+            under an OpenSSL-hashed name.
+    """
+    from cryptography import x509
+    from cryptography.hazmat.primitives.serialization import Encoding
+
+    # A dict, as a certificate often has several names (old and new hashes)
+    certificates: dict[bytes, None] = {}
+    try:
+        for path in sorted(ca_path.iterdir()):
+            # is_file() is False for the dangling links of removed certificates
+            if not (_HASHED_CERTIFICATE_NAME.fullmatch(path.name) and path.is_file()):
+                continue
+            try:
+                loaded = x509.load_pem_x509_certificates(path.read_bytes())
+            except ValueError:
+                logger.warning("Ignoring %s: not a PEM certificate", path)
+                continue
+            for certificate in loaded:
+                certificates[certificate.public_bytes(Encoding.PEM)] = None
+    except OSError as e:
+        raise ValueError(f"Cannot read the CA certificates in {ca_path}: {e}") from e
+    if not certificates:
+        raise ValueError(f"No OpenSSL-hashed PEM CA certificates in {ca_path}")
+    return b"".join(certificates)

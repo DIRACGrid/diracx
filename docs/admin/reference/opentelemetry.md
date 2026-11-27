@@ -15,12 +15,25 @@ See the [OpenTelemetry explanation](../explanations/opentelemetry.md) for the re
 | `DIRACX_OTEL_GRPC_ENDPOINT`    |          | With `grpc`: address of the collector OTLP/gRPC receiver, e.g. `otel-collector:4317`                                                                                                                    |
 | `DIRACX_OTEL_GRPC_INSECURE`    | `true`   | With `grpc`: do not use TLS to talk to the collector                                                                                                                                                    |
 | `DIRACX_OTEL_HTTP_ENDPOINT`    |          | With `http`: base URL of the collector OTLP/HTTP receiver, e.g. `http://otel-collector:4318`. `/v1/traces`, `/v1/metrics` and `/v1/logs` are appended to it, and the scheme decides whether TLS is used |
+| `DIRACX_OTEL_CA_PATH`          |          | OpenSSL-hashed directory of CA certificates used to verify the collector (enables TLS with `grpc`)                                                                                                      |
 | `DIRACX_OTEL_HEADERS`          |          | JSON dictionary of headers sent to the collector, e.g. `{"tenant_id": "lhcbdiracx-cert"}`                                                                                                               |
 
 These settings are read by the long running processes: API servers, scheduler and workers. The `diracx-tasks call` and `diracx-tasks submit` commands do not send telemetry.
 Sending telemetry requires the `otel` extra of `diracx-core` (`diracx-core[otel]`), which the DiracX container images include.
 If the endpoint of the chosen protocol is empty, the standard `OTEL_EXPORTER_OTLP_ENDPOINT` variables (or their defaults, `localhost:4317` and `http://localhost:4318`) are used.
 They are also listed with the other [environment variables](env-variables.md#otelsettings).
+
+For a TLS collector using a private CA, set `DIRACX_OTEL_CA_PATH` to a directory of
+PEM CA certificates prepared with `openssl rehash` (e.g. `/etc/grid-security/certificates`).
+With `http`, use an `https://` endpoint. With `grpc`, TLS is then enabled automatically.
+Only the certificates of this directory are trusted: it takes precedence over
+`OTEL_EXPORTER_OTLP_CERTIFICATE`, `REQUESTS_CA_BUNDLE` and `CURL_CA_BUNDLE`, and revocation lists are not checked.
+The process does not start if the directory does not exist (even if `DIRACX_OTEL_ENABLED` is `false`), cannot be read or has no such certificate.
+Files which are not PEM certificates are ignored, and an empty value is the same as not setting the variable.
+
+With `grpc`, the certificates are read once at startup, so the processes have to be restarted to pick up a new CA,
+and the standard OTLP client certificate variables are not used. With `http`, the directory is read for each new connection,
+and `OTEL_PYTHON_EXPORTER_OTLP_HTTP_CREDENTIAL_PROVIDER` is not used.
 
 ### Standard OpenTelemetry variables
 

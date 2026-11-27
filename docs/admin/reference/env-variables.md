@@ -423,6 +423,17 @@ The base URL of the OpenTelemetry collector (e.g. `http://otel-collector:4318`),
 used with the `http` protocol. `/v1/traces`, `/v1/metrics` and `/v1/logs`
 are appended to it. The scheme (`http` or `https`) decides whether TLS is used.
 
+### `DIRACX_OTEL_CA_PATH`
+
+*Optional*, default value: `None`
+
+OpenSSL-hashed directory (see `openssl rehash`) of the PEM CA certificates used
+to verify the collector, instead of the system ones. It takes precedence over
+`OTEL_EXPORTER_OTLP_CERTIFICATE`, `REQUESTS_CA_BUNDLE` and `CURL_CA_BUNDLE`.
+With `grpc`, setting it enables TLS regardless of `grpc_insecure`, the
+certificates are read once at startup, and the standard OTLP client certificate
+variables are not used. An empty value is the same as not setting it.
+
 ### `DIRACX_OTEL_HEADERS`
 
 *Optional*, default value: `None`
