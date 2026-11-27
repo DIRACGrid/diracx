@@ -2,8 +2,18 @@ name: Deployment
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+  # A release manager publishes the draft release made by release-please. That
+  # creates the tag (CI is not allowed to) and starts the publish.
+  release:
+    types: [published]
+  # Re-publish an existing tag after a failed publish. Run from main (pypi env).
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to publish (e.g. v0.1.0)
+        required: true
   pull_request:
     paths-ignore:
       - '**.md'
@@ -12,30 +22,85 @@ on:
   schedule:
     - cron: '0 10 * * *'
 
+# Concurrency is set per job (release-please, publish, docker), not on the
+# workflow, so a publish waiting for approval does not hold every later push.
+#
+# Release flow: merging the release PR makes release-please create a draft
+# release, with no tag. Publishing the draft triggers build, publish and docker.
+
 permissions: {}
 
 jobs:
-  deploy-pypi:
-    name: PyPI deployment
+  # Maintains the release PR and, once it is merged, creates the draft release
+  # (see release-please-config.json). Also runs when the draft is published, to
+  # open the next release PR without waiting for another merge.
+  release-please:
+    name: release-please
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'release')
+      && github.repository == 'DIRACGrid/diracx'
+    concurrency:
+      group: release-please
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # release commit and draft GitHub release
+      issues: write  # release labels
+      pull-requests: write  # open and update the release PR
+    steps:
+      # release-please ignores draft releases (they have no tag). Until the draft
+      # for the manifest version is published it finds no release for that
+      # version and builds the release PR from the whole history, so do not run
+      # it in that window. This job has no checkout, so call the API with an
+      # explicit repo; any API error fails the step instead of being read as
+      # "no draft".
+      - name: Check for an unpublished draft release
+        id: pending
+        # bash -eo pipefail: without pipefail a failed `gh api` in the pipeline
+        # below is hidden by jq, which exits 0 on empty input.
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Always main's manifest: a release or re-run SHA can be an older commit.
+          MANIFEST_REF: ${{ github.event.repository.default_branch }}
+        run: |
+          version="$(gh api "repos/$GITHUB_REPOSITORY/contents/.release-please-manifest.json?ref=$MANIFEST_REF" \
+            --jq .content | base64 -d | jq -er '."."')"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::Unexpected version in .release-please-manifest.json: '$version'"
+            exit 1
+          fi
+          drafts="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq ".[] | select(.draft and .tag_name == \"v$version\") | .id")"
+          if [[ -n "$drafts" ]]; then
+            echo "::warning::Draft release v$version is not published yet: release-please skipped"
+            echo "draft=true" >> "$GITHUB_OUTPUT"
+          fi
+      # Two calls: within one call the PR step cannot see the draft the release
+      # step just made, and would rebuild the release PR from the whole history.
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+        if: steps.pending.outputs.draft != 'true'
+        with:
+          skip-github-pull-request: true
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        if: steps.pending.outputs.draft != 'true' && steps.release.outputs.releases_created != 'true'
+        with:
+          skip-github-release: true
+
+  build:
+    name: Build distribution 📦
+    # Pushes, releases and manual runs only in DIRACGrid/diracx: a release or
+    # dispatch in a fork must not start publish and docker (they need build).
+    if: >-
+      github.repository == 'DIRACGrid/diracx'
+      || (github.event_name != 'push' && github.event_name != 'release' && github.event_name != 'workflow_dispatch')
     runs-on: "ubuntu-latest"
-    if: github.event_name != 'push' || github.repository == 'DIRACGrid/diracx'
     outputs:
       new-version: ${{ steps.check-tag.outputs.new-version }}
       create-release: ${{ steps.check-tag.outputs.create-release }}
     permissions:
-      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing on pypi
-      actions: write
-      checks: write
-      contents: write
-      deployments: write
-      discussions: write
-      issues: write
-      packages: write
-      pages: write
-      pull-requests: write
-      repository-projects: write
-      security-events: write
-      statuses: write
+      contents: read
     defaults:
       run:
         # We need extglob for REFERENCE_BRANCH substitution
@@ -43,6 +108,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          # setuptools_scm needs the release tag to compute the version.
+          ref: ${{ github.event.release.tag_name || inputs.tag || '' }}
           token: ${{ github.token }}
           persist-credentials: false
       - run: |
@@ -67,23 +134,28 @@ jobs:
       - name: Extract version from tag
         id: check-tag
         env:
-          GITHUB_REF: ${{ github.ref }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          RELEASE_CREATED: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
         run: |
           set -xeuo pipefail
-          IFS=$'\n\t'
-          # Check if this is a tag push
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            # Extract version from the tag
-            export NEW_VERSION="${GITHUB_REF#refs/tags/}"
-            echo "Deploying release $NEW_VERSION"
-            echo "create-release=true" >> $GITHUB_OUTPUT
-            echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          if [[ "$RELEASE_CREATED" == 'true' ]]; then
+            # A manual dispatch accepts any ref; only publish a real release tag.
+            if [[ ! "$RELEASE_TAG" =~ ^v[0-9] ]] || ! git tag --points-at HEAD | grep -Fx "$RELEASE_TAG" >/dev/null; then
+              echo "::error::$RELEASE_TAG is not a release tag on the checked-out commit"
+              exit 1
+            fi
+            echo "Deploying release $RELEASE_TAG"
+            echo "create-release=true" >> "$GITHUB_OUTPUT"
+            echo "new-version=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
           else
-            echo "Not a tag push, skipping release"
-            echo "create-release=false" >> $GITHUB_OUTPUT
+            echo "Not a release, skipping publish"
+            echo "create-release=false" >> "$GITHUB_OUTPUT"
+            echo "new-version=" >> "$GITHUB_OUTPUT"
           fi
       - name: Build distributions
         run: |
+          # The job's custom shell has no -e: without this, a failed package is skipped.
+          set -euo pipefail
           for pkg_dir in $PWD/diracx-*; do
             echo "Building $pkg_dir"
             python -m build --outdir $PWD/dist $pkg_dir
@@ -93,22 +165,67 @@ jobs:
       - name: 'Upload Artifact'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: diracx-whl
-          path: dist/diracx*.whl
-          retention-days: 5
+          # Wheels and sdists: both are published to PyPI.
+          name: diracx-dist
+          path: dist/diracx*
+          # publish downloads it after the pypi approval, and a failed publish
+          # can be re-run for 30 days (make-a-release.md): keep it that long.
+          retention-days: 30
+
+  # Only this job can get a PyPI token; the build above runs without it.
+  publish:
+    name: Publish distribution 📦 to PyPI
+    needs: build
+    if: needs.build.outputs.create-release == 'true'
+    # One group per tag: a group keeps only one pending job, so a shared group
+    # would cancel a queued publish of another version.
+    concurrency:
+      group: pypi-publish-${{ needs.build.outputs.new-version }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing on pypi
+    steps:
+      - name: Download the distribution packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: diracx-dist
+          path: dist/
       # Use trusted publisher for pypi
       # https://docs.pypi.org/trusted-publishers/
       - name: Publish package on PyPI
-        if: steps.check-tag.outputs.create-release == 'true'
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
           # Generate and upload PEP 740 attestations (build provenance) for the wheels.
           attestations: true
+          # A re-publish after a partial upload must not fail on files already there.
+          skip-existing: true
 
   docker:
-    needs: deploy-pypi
+    # Release images only after the wheels are on PyPI. publish is skipped on
+    # non-release runs, so check results explicitly instead of the implicit success().
+    needs:
+      - build
+      - publish
+    if: ${{ !cancelled() && needs.build.result == 'success' && (needs.publish.result == 'success' || needs.build.outputs.create-release != 'true') }}
+    # Each push to main builds the :dev images: a newer push cancels the older
+    # build, so an older commit cannot overwrite :dev (the dev-tags job moves the
+    # tags once all three images exist). Releases are never cancelled.
+    concurrency:
+      group: docker-${{ needs.build.outputs.new-version || github.ref }}
+      cancel-in-progress: ${{ needs.build.outputs.create-release != 'true' }}
     timeout-minutes: 30
     runs-on: ubuntu-latest
+    outputs:
+      push-dev: ${{ env.PUSH_DEV }}
+      services-digest: ${{ steps.build-services-dev.outputs.digest }}
+      tasks-digest: ${{ steps.build-tasks-dev.outputs.digest }}
+      client-digest: ${{ steps.build-client-dev.outputs.digest }}
+    env:
+      # Only main pushes and the nightly run update :dev; PRs build without pushing.
+      PUSH_DEV: ${{ (github.event_name == 'push' || github.event_name == 'schedule') && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
     permissions:
       contents: read
       packages: write          # push images to ghcr.io
@@ -118,6 +235,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          # The image build copies .git so hatch-vcs can compute the version:
+          # release images need the tag, not the push commit.
+          ref: ${{ needs.build.outputs.new-version || '' }}
           persist-credentials: false
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
@@ -130,85 +250,180 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # A re-publish (workflow_dispatch or re-run) only fills in what is missing:
+      # an image already pushed for this tag is kept, not replaced by a new
+      # build with another digest. Only a registry 404 counts as missing: any
+      # other answer fails the step rather than risk replacing the image. An
+      # existing image with no provenance (its attestation failed) is attested
+      # here; one that has it is not attested again.
+      - name: Check existing release images
+        id: existing
+        if: ${{ needs.build.outputs.create-release == 'true' }}
+        env:
+          TAG: ${{ needs.build.outputs.new-version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          accept='application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json'
+          for img in services tasks client; do
+            repo="diracgrid/diracx/$img"
+            ref="ghcr.io/$repo:$TAG"
+            token="$(curl -fsS -u "$GITHUB_ACTOR:$GH_TOKEN" "https://ghcr.io/token?scope=repository:$repo:pull" | jq -er .token)"
+            headers="$(mktemp)"
+            code="$(curl -sS --head -o /dev/null -D "$headers" -w '%{http_code}' \
+              -H "Authorization: Bearer $token" -H "Accept: $accept" \
+              "https://ghcr.io/v2/$repo/manifests/$TAG")"
+            if [[ "$code" == 404 ]]; then
+              echo "::notice::$ref not found, building it"
+              continue
+            elif [[ "$code" != 200 ]]; then
+              echo "::error::cannot check $ref: HTTP $code"
+              exit 1
+            fi
+            digest="$(tr -d '\r' < "$headers" | awk 'tolower($1) == "docker-content-digest:" {print $2}')"
+            if [[ "$digest" != sha256:* ]]; then
+              echo "::error::no digest for $ref"
+              exit 1
+            fi
+            echo "::notice::$ref already exists, not rebuilding it"
+            echo "$img=true" >> "$GITHUB_OUTPUT"
+            # 404 when the digest has no attestation (gh prints the error body
+            # on stdout, so drop it). Any other error is treated the same, at
+            # worst attesting the image twice.
+            count="$(gh api "repos/$GITHUB_REPOSITORY/attestations/$digest" --jq '.attestations | length' 2>/dev/null)" || count=0
+            if [[ "$count" == 0 ]]; then
+              echo "::warning::$ref has no build provenance, attesting $digest"
+              echo "$img-unattested=$digest" >> "$GITHUB_OUTPUT"
+            fi
+          done
+
       - name: Build and push services (release)
         id: build-services-release
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' && steps.existing.outputs.services != 'true' }}
         with:
           context: .
           file: containers/Dockerfile
           build-args: PIXI_ENV=container-services
           push: true
-          tags: "ghcr.io/diracgrid/diracx/services:${{ needs.deploy-pypi.outputs.new-version }}"
+          tags: "ghcr.io/diracgrid/diracx/services:${{ needs.build.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
       - name: Attest services (release)
-        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' && (steps.existing.outputs.services != 'true' || steps.existing.outputs.services-unattested != '') }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ghcr.io/diracgrid/diracx/services
-          subject-digest: ${{ steps.build-services-release.outputs.digest }}
+          subject-digest: ${{ steps.build-services-release.outputs.digest || steps.existing.outputs.services-unattested }}
           push-to-registry: true
       - name: Build and push tasks (release)
         id: build-tasks-release
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' && steps.existing.outputs.tasks != 'true' }}
         with:
           context: .
           file: containers/Dockerfile
           build-args: PIXI_ENV=container-tasks
           push: true
-          tags: "ghcr.io/diracgrid/diracx/tasks:${{ needs.deploy-pypi.outputs.new-version }}"
+          tags: "ghcr.io/diracgrid/diracx/tasks:${{ needs.build.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
       - name: Attest tasks (release)
-        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' && (steps.existing.outputs.tasks != 'true' || steps.existing.outputs.tasks-unattested != '') }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ghcr.io/diracgrid/diracx/tasks
-          subject-digest: ${{ steps.build-tasks-release.outputs.digest }}
+          subject-digest: ${{ steps.build-tasks-release.outputs.digest || steps.existing.outputs.tasks-unattested }}
           push-to-registry: true
       - name: Build and push client (release)
         id: build-client-release
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' && steps.existing.outputs.client != 'true' }}
         with:
           context: .
           file: containers/Dockerfile
           build-args: PIXI_ENV=container-client
           push: true
-          tags: "ghcr.io/diracgrid/diracx/client:${{ needs.deploy-pypi.outputs.new-version }}"
+          tags: "ghcr.io/diracgrid/diracx/client:${{ needs.build.outputs.new-version }}"
           platforms: linux/amd64,linux/arm64
       - name: Attest client (release)
-        if: ${{ needs.deploy-pypi.outputs.create-release == 'true' }}
+        if: ${{ needs.build.outputs.create-release == 'true' && (steps.existing.outputs.client != 'true' || steps.existing.outputs.client-unattested != '') }}
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ghcr.io/diracgrid/diracx/client
-          subject-digest: ${{ steps.build-client-release.outputs.digest }}
+          subject-digest: ${{ steps.build-client-release.outputs.digest || steps.existing.outputs.client-unattested }}
           push-to-registry: true
 
-      - name: Build and push services (dev)
+      - name: Build services (dev)
+        id: build-services-dev
+        if: ${{ needs.build.outputs.create-release != 'true' }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: containers/Dockerfile
           build-args: PIXI_ENV=container-services
-          push: ${{ github.event_name != 'pull_request' && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
-          tags: ghcr.io/diracgrid/diracx/services:dev
+          # Pushed by digest only: the :dev tags are moved together below.
+          outputs: type=image,name=ghcr.io/diracgrid/diracx/services,push-by-digest=true,name-canonical=true,push=${{ env.PUSH_DEV }}
           platforms: linux/amd64,linux/arm64
-      - name: Build and push tasks (dev)
+      - name: Build tasks (dev)
+        id: build-tasks-dev
+        if: ${{ needs.build.outputs.create-release != 'true' }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: containers/Dockerfile
           build-args: PIXI_ENV=container-tasks
-          push: ${{ github.event_name != 'pull_request' && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
-          tags: ghcr.io/diracgrid/diracx/tasks:dev
+          # Pushed by digest only: the :dev tags are moved together below.
+          outputs: type=image,name=ghcr.io/diracgrid/diracx/tasks,push-by-digest=true,name-canonical=true,push=${{ env.PUSH_DEV }}
           platforms: linux/amd64,linux/arm64
-      - name: Build and push client (dev)
+      - name: Build client (dev)
+        id: build-client-dev
+        if: ${{ needs.build.outputs.create-release != 'true' }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: containers/Dockerfile
           build-args: PIXI_ENV=container-client
-          push: ${{ github.event_name != 'pull_request' && github.repository == 'DIRACGrid/diracx' && github.ref_name == 'main' }}
-          tags: ghcr.io/diracgrid/diracx/client:dev
+          # Pushed by digest only: the :dev tags are moved together below.
+          outputs: type=image,name=ghcr.io/diracgrid/diracx/client,push-by-digest=true,name-canonical=true,push=${{ env.PUSH_DEV }}
           platforms: linux/amd64,linux/arm64
+
+  dev-tags:
+    # Moves the three :dev tags in a group that is never cancelled, so a newer
+    # push cannot stop it with only some of the tags moved.
+    needs:
+      - build
+      - docker
+    if: ${{ needs.build.outputs.create-release != 'true' && needs.docker.outputs.push-dev == 'true' }}
+    concurrency:
+      group: docker-dev-tags
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write          # move the :dev tags on ghcr.io
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Login to GitHub container registry
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag the dev images
+        env:
+          SERVICES: ${{ needs.docker.outputs.services-digest }}
+          TASKS: ${{ needs.docker.outputs.tasks-digest }}
+          CLIENT: ${{ needs.docker.outputs.client-digest }}
+        run: |
+          set -euo pipefail
+          for pair in "services=$SERVICES" "tasks=$TASKS" "client=$CLIENT"; do
+            img="${pair%%=*}"
+            digest="${pair#*=}"
+            if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "::error::No digest for the $img dev image: '$digest'"
+              exit 1
+            fi
+          done
+          for pair in "services=$SERVICES" "tasks=$TASKS" "client=$CLIENT"; do
+            img="${pair%%=*}"
+            docker buildx imagetools create \
+              -t "ghcr.io/diracgrid/diracx/$img:dev" "ghcr.io/diracgrid/diracx/$img@${pair#*=}"
+          done

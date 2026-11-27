@@ -33,6 +33,8 @@ Then copy content of /tmp/jwks.json to file outside of the container to be mappe
 
 ### diracx.env
 
+Start from the [example file](diracx.env.example): it lists the variables to set, with placeholders to replace.
+
 At this point you need to have created the `DiracXAuthDB` and the `jwks.json` (see above).
 Now you need two further keys:
 
@@ -57,35 +59,21 @@ print(f"API key is diracx:legacy:{base64.urlsafe_b64encode(token).decode()}")
 print(f"DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY={hashlib.sha256(token).hexdigest()}")
 ```
 
-Below is an example of a dirac.env file. The server is called 'diractest.grid.hep.ph.ic.ac.uk'. Replace as necessary.
+On our test node ('diractest.grid.hep.ph.ic.ac.uk', replace as necessary) we changed these lines of the example.
+Write values without quotes: `podman --env-file` (and podman-compose up to 1.1.0) keeps quotes as part of the value.
 
 ```
-DIRACX_SERVICE_AUTH_STATE_KEY=[state_key from above]
-DIRACX_SERVICE_AUTH_TOKEN_ISSUER=["Your hostname here", e.g. "https://diractest.grid.hep.ph.ic.ac.uk"]
-DIRACX_SERVICE_AUTH_TOKEN_KEYSTORE=file:///keystore/jwks.json [The one you made earlier]
-# replace diractest.grid.hep.ph.ic.ac.uk with your hostname
-DIRACX_SERVICE_AUTH_ALLOWED_REDIRECTS='["https://diractest.grid.hep.ph.ic.ac.uk/#authentication-callback"]'
-# we are currently not using S3, nevertheless these variables need to be set
-DIRACX_SANDBOX_STORE_S3_CLIENT_KWARGS="{}"
-DIRACX_SANDBOX_STORE_BUCKET_NAME="notsetyet"
-# disable the jobs router (and hopefully S3)
-DIRACX_SERVICE_JOBS_ENABLED=false
-# we are using a local git repo on the node, this is not fully supported yet.
-# Please see: https://diracx.diracgrid.org/en/latest/RUN_PROD/#cs for the approved way.
-DIRACX_CONFIG_BACKEND_URL="git+file:///cs_store?revision=main"
-DIRACX_DB_URL_AUTHDB=mysql+aiomysql://YourUser:YourPassword@host.containers.internal:3306/DiracXAuthDB
-# these are the users and passwords you have chosen for the databases in DIRAC; they can be found in
-# dirac.cfg
-# host.containers.internal: For the development node our databases are on the same machine
+DIRACX_SERVICE_AUTH_TOKEN_ISSUER=https://diractest.grid.hep.ph.ic.ac.uk
+DIRACX_SERVICE_AUTH_TOKEN_KEYSTORE=file:///keystore/jwks.json
+DIRACX_SERVICE_AUTH_ALLOWED_REDIRECTS=["https://diractest.grid.hep.ph.ic.ac.uk/#authentication-callback"]
+# a local git repo on the node, not fully supported yet: see https://diracx.diracgrid.org/en/latest/RUN_PROD/#cs
+DIRACX_CONFIG_BACKEND_URL=git+file:///cs_store?revision=main
+# the DIRAC databases from dirac.cfg; host.containers.internal = databases on the same machine
 DIRACX_DB_URL_JOBDB=mysql+aiomysql://YourUser:YourPassword@host.containers.internal:3306/JobDB
-DIRACX_DB_URL_JOBLOGGINGDB=mysql+aiomysql://YourUser:YourPassword@host.containers.internal:3306/JobLoggingDB
-DIRACX_DB_URL_PILOTAGENTSDB=mysql+aiomysql://YourUser:YourPassword@host.containers.internal:3306/PilotAgentsDB
-DIRACX_DB_URL_SANDBOXMETADATADB=mysql+aiomysql://YourUser:YourPassword@host.containers.internal:3306/SandboxMetadataDB
-DIRACX_DB_URL_TASKQUEUEDB=mysql+aiomysql://YourUser:YourPassword@host.containers.internal:3306/TaskQueueDB
-# opensearch related; the user and password are specific to opensearch,
-DIRACX_OS_DB_JOBPARAMETERSDB={"hosts":"YourOpensearchUsername:YourOpensearchPwd@YourOpensearchServer:9200", "use_ssl":true, "ca_certs":"/etc/opensearch-ca.pem"}
-DIRACX_OS_DB_PILOTLOGSDB={"hosts":"YourOpensearchUsername:YourOpensearchPwd@YourOpenSearchServer:9200", "use_ssl":true, "ca_certs":"/etc/opensearch-ca.pem"}
-DIRACX_LEGACY_EXCHANGE_HASHED_API_KEY=(from the output from generating the legacy key)
+# CA mounted in podman-compose.yaml
+DIRACX_OS_DB_JOBPARAMETERSDB={"hosts":"YourOpensearchUsername:YourOpensearchPwd@YourOpensearchServer:9200","use_ssl":true,"ca_certs":"/etc/opensearch-ca.pem"}
+# no S3 yet: disable the jobs router (the sandbox store settings must still be set)
+DIRACX_SERVICE_JOBS_ENABLED=false
 ```
 
 ### diracx-web.env

@@ -17,11 +17,17 @@ Execute the following points in the presented order.
 
     - If you want to update the release notes manually, follow the [`release-please` doc](https://github.com/googleapis/release-please?tab=readme-ov-file#how-can-i-fix-release-notes)
 
-3. Merge the `release-please` PR
+3. Close and reopen the `release-please` PR to run its checks (see the [reference](../reference/making-releases.md#diracx-release)), wait for them to pass, then merge it. The [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Apush) creates a **draft** [release](https://github.com/DIRACGrid/diracx/releases). No tag exists yet.
 
-4. Check the [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Apush+actor%3ADIRACGridBot)
+4. As a release manager, publish the draft without changing its target commit.
 
-5. When the above will be finished, check that the [CI](https://github.com/DIRACGrid/diracx-charts/actions/workflows/chart-ci.yml?query=actor%3ADIRACGridBot) in `diracx-charts` is successful
+    Until it is published, `release-please` does not run on pushes to `main`: it cannot see a draft, finds no release for the new version and would build the release PR from the whole history. **Never delete the draft**, for the same reason.
+
+5. Publishing creates the tag and starts a new [deployment action](https://github.com/DIRACGrid/diracx/actions/workflows/deployment.yml?query=event%3Arelease). Another release manager approves its `pypi` deployment; the packages then go to PyPI and the images to `ghcr.io`. If a job fails, use **Re-run failed jobs** on that run. Run the deployment workflow manually with the tag (`workflow_dispatch`) only if the fix needs a change to `deployment.yml` (a re-run uses the workflow of the tagged commit) or the run is older than 30 days; it skips what is already published.
+
+6. Renovate opens a pull request in `diracx-charts` for the new version. Once it is merged, check that the [CI](https://github.com/DIRACGrid/diracx-charts/actions/workflows/chart-ci.yml) in `diracx-charts` is successful
+
+7. On the Monday after the release, the [vulnerability scan](https://github.com/DIRACGrid/diracx/actions/workflows/vulnerabilities.yml) (Trivy) scans the released images. The release manager who published looks at its [alerts](https://github.com/DIRACGrid/diracx/security/code-scanning?query=is%3Aopen+tool%3ATrivy) and opens an issue for each critical or high finding.
 
 At this stage, there is a new `diracx` and `diracx-chart` release.
 
