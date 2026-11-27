@@ -59,7 +59,10 @@ def test_start_unknown_workgraph(normal_user_client):
 
 def test_submit_invalid_workgraph(normal_user_client):
     document = copy.deepcopy(EXAMPLE)
-    document["steps"]["Second"] = copy.deepcopy(document["steps"]["MCSimulation"])
+    steps = document["$graph"][0]["steps"]
+    second = copy.deepcopy(steps[0])
+    second["id"] = "#main/Second"
+    steps.append(second)
     r = normal_user_client.post(ENDPOINT, json=document)
     assert r.status_code == HTTPStatus.UNPROCESSABLE_ENTITY, r.text
     assert r.json()["detail"] == [

@@ -1,9 +1,10 @@
 """Provide the endpoints submitting and starting a workgraph (DX-ADR-007).
 
-A workgraph is a CWL v1.2 ``Workflow`` carrying ``dirac:`` hints, sent as
-JSON. For now it must be made of a single step, which becomes a compute
-transformation (DIRACGrid/diracx#1081). Submission stores it ``New``; starting
-it moves it to ``Active``, which is when its feeder runs.
+A workgraph is a CWL v1.2 ``Workflow`` carrying ``dirac:`` hints, sent as the
+JSON document ``cwltool --pack`` makes. For now it must be made of a single
+step, which becomes a compute transformation (DIRACGrid/diracx#1081).
+Submission stores it ``New``; starting it moves it to ``Active``, which is
+when its feeder runs.
 """
 
 from __future__ import annotations
@@ -30,53 +31,82 @@ from .access_policies import ActionType, CheckTransformationPolicyCallable
 
 router = DiracxRouter()
 
+# A workgraph as cwltool --pack writes it: dirac: names as full IRIs, and the
+# step running another $graph entry
 EXAMPLE_WORKGRAPHS = {
     "Simulation": {
         "value": {
             "cwlVersion": "v1.2",
-            "class": "Workflow",
-            "label": "MC simulation",
             "$namespaces": {"dirac": "https://diracgrid.org/cwl#"},
-            "hints": {
-                "dirac:Workgraph": {"schema_version": "1.0", "type": "MCSimulation"}
-            },
-            "inputs": {
-                "events": {
-                    "type": {"type": "array", "items": ["File", "string"]},
-                    "dirac:Feeder": {
-                        "name": "Seeds",
-                        "args": {"target_events": 600000, "events_per_seed": 1000},
-                    },
-                }
-            },
-            "steps": {
-                "MCSimulation": {
-                    "hints": {
-                        "dirac:Transformation": {
-                            "packer": {"name": "FixedSize", "args": {"group_size": 1}}
+            "$graph": [
+                {
+                    "class": "Workflow",
+                    "id": "#main",
+                    "label": "MC simulation",
+                    "hints": [
+                        {
+                            "class": "https://diracgrid.org/cwl#Workgraph",
+                            "schema_version": "1.0",
+                            "type": "MCSimulation",
                         }
-                    },
-                    "run": {
-                        "class": "CommandLineTool",
-                        "baseCommand": ["lb-run", "Gauss"],
-                        "inputs": {"seed": {"type": ["File", "string"]}},
-                        "outputs": {
-                            "sim-files": {
-                                "type": "File[]",
-                                "outputBinding": {"glob": "*.sim"},
-                            }
-                        },
-                    },
-                    "in": {"seed": "events"},
-                    "out": ["sim-files"],
-                }
-            },
-            "outputs": {
-                "datasets": {
-                    "type": "File[]",
-                    "outputSource": "MCSimulation/sim-files",
-                }
-            },
+                    ],
+                    "inputs": [
+                        {
+                            "id": "#main/events",
+                            "type": {"type": "array", "items": ["File", "string"]},
+                            "https://diracgrid.org/cwl#Feeder": {
+                                "name": "Seeds",
+                                "args": {
+                                    "target_events": 600000,
+                                    "events_per_seed": 1000,
+                                },
+                            },
+                        }
+                    ],
+                    "steps": [
+                        {
+                            "id": "#main/MCSimulation",
+                            "hints": [
+                                {
+                                    "class": "https://diracgrid.org/cwl#Transformation",
+                                    "packer": {
+                                        "name": "FixedSize",
+                                        "args": {"group_size": 1},
+                                    },
+                                }
+                            ],
+                            "run": "#gauss.cwl",
+                            "in": [
+                                {
+                                    "id": "#main/MCSimulation/seed",
+                                    "source": "#main/events",
+                                }
+                            ],
+                            "out": ["#main/MCSimulation/sim-files"],
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "id": "#main/datasets",
+                            "type": "File[]",
+                            "outputSource": "#main/MCSimulation/sim-files",
+                        }
+                    ],
+                },
+                {
+                    "class": "CommandLineTool",
+                    "id": "#gauss.cwl",
+                    "baseCommand": ["lb-run", "Gauss"],
+                    "inputs": [{"id": "#gauss.cwl/seed", "type": ["File", "string"]}],
+                    "outputs": [
+                        {
+                            "id": "#gauss.cwl/sim-files",
+                            "type": "File[]",
+                            "outputBinding": {"glob": "*.sim"},
+                        }
+                    ],
+                },
+            ],
         }
     },
 }
@@ -91,10 +121,11 @@ async def submit_workgraph(
 ) -> WorkgraphSubmissionResult:
     """Submit a workgraph made of a single transformation.
 
-    The workflow must have exactly one step, carrying
-    ``dirac:Transformation``, with its process inline in ``run``. The
-    workgraph and its transformation are created ``New``; start the workgraph
-    to run it.
+    The document is the one ``cwltool --pack`` makes, self-contained: a
+    ``$graph`` whose ``#main`` workflow has exactly one step carrying
+    ``dirac:Transformation``, its ``run`` naming another entry or holding an
+    inline body. The workgraph and its transformation are created ``New``;
+    start the workgraph to run it.
 
     \f
 
