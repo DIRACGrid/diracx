@@ -458,3 +458,28 @@ Maximum number of parcels the monitor claims in one run.
 *Optional*, default value: `5`
 
 Simulated run time between a parcel's submission and its completion.
+
+## PackerSettings
+
+Settings controlling the transformation packer.
+
+### `DIRACX_TASKS_PACKER_ENABLED`
+
+*Optional*, default value: `False`
+
+Whether the packer sweep is scheduled automatically.
+
+### `DIRACX_TASKS_PACKER_INTERVAL_SECONDS`
+
+*Optional*, default value: `60`
+
+How often the sweep schedules a packer run for each active transformation.
+
+### `DIRACX_TASKS_PACKER_MAX_INPUTS_PER_INVOCATION`
+
+*Optional*, default value: `100000`
+
+Maximum number of inputs offered to a packer in one run.
+
+Bounds a run's memory: about 200 bytes per input in the core, plus about
+1 KB for each input the packer keeps.
