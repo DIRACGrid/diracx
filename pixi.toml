@@ -1,24 +1,23 @@
 [workspace]
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64", "linux-aarch64"]
-# Require a pixi new enough for the v7 lock file (added in 0.68.0), which also covers the
-# relative-duration exclude-newer ("cooldown") below (added in 0.67.0).
-requires-pixi = ">=0.68.0"
+# Require a pixi new enough for the exclude-newer exemptions below (added in 0.84.0)
+requires-pixi = ">=0.84.0"
+
 # Supply-chain cooldown: when (re)solving, skip conda and PyPI releases newer than 7 days,
 # matching the 7-day Renovate minimum-release-age. This filters fresh candidates at solve
 # time; it does not evict already-locked versions. To fast-track a reviewed release (e.g. a
-# CVE fix), override per package via [exclude-newer] (conda) or [pypi-exclude-newer] (PyPI).
-exclude-newer = "7d"
-
+# CVE fix), add an exemption for the package below (conda) or in
+# [workspace.pypi-exclude-newer] (PyPI).
+[workspace.exclude-newer]
+cutoff = "7d"
 # elkjs reached conda-forge on 2026-09-11, inside the cooldown, and until it clears a fresh
 # clone builds documentation whose simulator cannot lay anything out. 0.9.3 is the version
 # the tree vendored by hand and ran the checks against.
-[exclude-newer]
-elkjs = "0d"
+exemptions = { elkjs = "*" }
 
-[pypi-exclude-newer]
-diraccommon= "0d"
-signurlarity= "0d"
+[workspace.pypi-exclude-newer]
+exemptions = { diraccommon = "*", signurlarity = "*" }
 
 [dependencies]
 python = ">=3.11.3,<3.12"
