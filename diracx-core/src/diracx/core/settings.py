@@ -381,7 +381,7 @@ class SandboxStoreSettings(ServiceSettingsBase):
             ``None`` while the S3 client is available.
         """
         async with AsyncClient(
-            **self.s3_client_kwargs, httpx_max_connections=self.s3_max_pool_connections
+            **self.s3_client_kwargs, max_connections=self.s3_max_pool_connections
         ) as self._client:  # type: ignore
             if not await s3_bucket_exists(self._client, self.bucket_name):
                 if not self.auto_create_bucket:
