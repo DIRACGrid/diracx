@@ -24,7 +24,7 @@ def test_lock_object_types_not_loaded_as_tasks():
     registry = load_task_registry()
 
     # Real gubbins tasks are correctly discovered
-    assert registry["my_pilots:MySubmitPilotsTask"] is MySubmitPilotsTask
+    assert registry["my-pilots:MySubmitPilotsTask"] is MySubmitPilotsTask
     assert registry["lollygag:SyncOwnersTask"] is SyncOwnersTask
 
     # Lock object type modules are not registered as tasks

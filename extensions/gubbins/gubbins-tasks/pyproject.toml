@@ -36,7 +36,7 @@ OwnerCleanupTask = "gubbins.tasks.lollygag:OwnerCleanupTask"
 OwnerReportTask = "gubbins.tasks.lollygag:OwnerReportTask"
 # --8<-- [start:my_pilots_task_entry_points]
 
-[project.entry-points."diracx.tasks.my_pilots"]
+[project.entry-points."diracx.tasks.my-pilots"]
 MySubmitPilotsTask = "gubbins.tasks.my_pilots:MySubmitPilotsTask"
 MyPilotTask = "gubbins.tasks.my_pilots:MyPilotTask"
 MyCheckPilotsTask = "gubbins.tasks.my_pilots:MyCheckPilotsTask"
