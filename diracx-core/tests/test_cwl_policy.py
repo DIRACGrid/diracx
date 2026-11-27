@@ -6,7 +6,11 @@ from pathlib import Path
 import pytest
 
 from diracx.core.cwl import PolicyViolationError, check_policy
-from diracx.core.cwl.policy import MAX_DOCUMENT_BYTES, MAX_PROCESS_BYTES
+from diracx.core.cwl.policy import (
+    MAX_DOCUMENT_BYTES,
+    MAX_INLINE_DEPTH,
+    MAX_PROCESS_BYTES,
+)
 
 FIXTURE = Path(__file__).parent / "fixtures" / "mc-simulation.packed.json"
 
@@ -32,6 +36,15 @@ def workflow(run: dict, **step) -> dict:
         "outputs": [],
         "steps": [{"id": "#main/s0", "run": run, "in": [], "out": [], **step}],
     }
+
+
+def nested(depth: int) -> dict:
+    """A workflow whose inline bodies nest ``depth`` deep."""
+    document = tool(id="#t")
+    for i in reversed(range(depth)):
+        document = workflow(document, id=f"#main/s{i}")
+        document["id"] = f"#w{i}"
+    return {**document, "id": "#main"}
 
 
 def test_the_mc_simulation_workgraph_is_accepted():
@@ -116,6 +129,41 @@ def test_requirements_and_hints_that_are_not_objects_are_refused(value, where):
         PolicyViolationError, match=f"#main has {where} that are not a list or map"
     ):
         check_policy(tool(**{where: value}))
+
+
+@pytest.mark.parametrize("steps", ["abc", ["a"], [None], 5, {"s0": "#tool.cwl"}])
+def test_steps_that_are_not_objects_are_refused(steps):
+    document = {**workflow(tool()), "steps": steps}
+    with pytest.raises(
+        PolicyViolationError, match="#main has steps that are not a list or map"
+    ):
+        check_policy(document)
+
+
+def test_steps_that_are_not_objects_are_refused_in_an_inline_body():
+    document = workflow({**workflow(tool()), "id": "#inner", "steps": ["a"]})
+    with pytest.raises(
+        PolicyViolationError,
+        match="inline process of step #main/s0 has steps that are not a list or map",
+    ):
+        check_policy(document)
+
+
+def test_inline_processes_nested_too_deep_are_refused():
+    check_policy(nested(MAX_INLINE_DEPTH))
+    with pytest.raises(
+        PolicyViolationError,
+        match=f"step #main/s{MAX_INLINE_DEPTH - 1} runs an inline process nested "
+        f"more than {MAX_INLINE_DEPTH} deep",
+    ):
+        check_policy(nested(MAX_INLINE_DEPTH + 1))
+
+
+def test_documents_nested_too_deep_to_read_are_refused():
+    # Small enough to be submitted: the size limit does not bound the depth
+    assert 2000 * len(json.dumps(nested(1))) < MAX_DOCUMENT_BYTES
+    with pytest.raises(PolicyViolationError, match="nested too deeply"):
+        check_policy(nested(2000))
 
 
 def test_abstract_operations_are_refused_wherever_they_are():

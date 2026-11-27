@@ -12,7 +12,7 @@ from typing import Any
 
 from diracx.core.hashing import canonical_json_bytes
 
-from .identity import _graph, _steps
+from .identity import _graph
 
 # Requirement classes every backend can honour, named as in the CWL v1.2
 # specification (https://www.commonwl.org/v1.2/CommandLineTool.html and
@@ -66,6 +66,12 @@ MAX_PROCESS_BYTES = 256 * 1024
 # row, which is an entry with everything it runs.
 MAX_DOCUMENT_BYTES = 1024 * 1024
 
+# How deep inline run bodies may nest below a $graph entry. cwltool --pack
+# makes an entry of every process a step runs, so real documents nest none or
+# a handful; without a bound, a small document could nest enough of them to
+# exhaust the stack of whatever walks it.
+MAX_INLINE_DEPTH = 32
+
 
 class PolicyViolationError(ValueError):
     """A process is valid CWL but not something DiracX accepts."""
@@ -87,7 +93,13 @@ def check_policy(document: dict[str, Any]) -> None:
             ``$graph`` entry (or the step running an inline body) it is in.
     """
     problems = []
-    size = len(canonical_json_bytes(document))
+    try:
+        size = len(canonical_json_bytes(document))
+    except RecursionError:
+        # Whatever is nested, nothing below could walk it either
+        raise PolicyViolationError(
+            "the document is nested too deeply to be read"
+        ) from None
     if size > MAX_DOCUMENT_BYTES:
         problems.append(
             f"the document is {size} bytes, more than {MAX_DOCUMENT_BYTES}; "
@@ -100,20 +112,26 @@ def check_policy(document: dict[str, Any]) -> None:
                 f"{entry_id} is {size} bytes, more than {MAX_PROCESS_BYTES}; "
                 "move large content into a sandbox or File input"
             )
-        for name, process in _processes(entry_id, entry):
-            problems.extend(f"{name} {problem}" for problem in _check(process))
+        problems.extend(_problems(entry_id, entry))
     if problems:
         raise PolicyViolationError("; ".join(problems))
 
 
-def _processes(name: str, process: dict[str, Any]) -> Iterator[tuple[str, dict]]:
-    """A process and the inline bodies its steps run, each with a name."""
-    yield name, process
-    for step in _steps(process):
-        if isinstance(step.get("run"), dict):
-            yield from _processes(
-                f"the inline process of step {step.get('id', '?')}", step["run"]
+def _problems(name: str, process: dict[str, Any], depth: int = 0) -> Iterator[str]:
+    """What is wrong with a process and the inline bodies its steps run."""
+    yield from (f"{name} {problem}" for problem in _check(process))
+    for step in _steps(process) or []:
+        if not isinstance(step.get("run"), dict):
+            continue
+        if depth == MAX_INLINE_DEPTH:
+            yield (
+                f"{name} runs an inline process nested more than "
+                f"{MAX_INLINE_DEPTH} deep; make it a $graph entry and name it "
+                "in run"
             )
+        else:
+            inline = f"the inline process of step {step.get('id', '?')}"
+            yield from _problems(inline, step["run"], depth + 1)
 
 
 def _check(process: dict[str, Any]) -> Iterator[str]:
@@ -125,7 +143,10 @@ def _check(process: dict[str, Any]) -> Iterator[str]:
             "CommandLineTool, ExpressionTool or Workflow with the same inputs "
             "and outputs"
         )
-    for holder in (process, *_steps(process)):
+    steps = _steps(process)
+    if steps is None:
+        yield "has steps that are not a list or map of objects"
+    for holder in (process, *(steps or [])):
         requirements = _classes(holder.get("requirements"))
         hints = _classes(holder.get("hints"))
         if requirements is None:
@@ -153,6 +174,16 @@ def _check(process: dict[str, Any]) -> Iterator[str]:
                 "fetch an image on the worker node; publish the image "
                 "and name it with dockerPull"
             )
+
+
+def _steps(process: dict[str, Any]) -> list[dict[str, Any]] | None:
+    """The steps of a process, from list or map form; ``None`` if neither."""
+    steps = process.get("steps") or []
+    if isinstance(steps, dict):
+        steps = list(steps.values())
+    if not isinstance(steps, list) or not all(isinstance(s, dict) for s in steps):
+        return None
+    return steps
 
 
 def _classes(value: Any) -> list[tuple[str, dict]] | None:

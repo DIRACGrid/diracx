@@ -36,6 +36,12 @@ in.
 - **Requirements and hints given as a list or map of objects.** The policy
     runs before the schema is validated, so it refuses what it cannot read
     rather than fail on it.
+- **Steps given as a list or map of objects**, for the same reason.
+- **Inline `run` bodies nested at most 32 deep** below a `$graph` entry.
+    `cwltool --pack` makes an entry of every process a step runs, so real
+    documents nest a handful at most; a small document could otherwise nest
+    enough of them to exhaust the stack of whatever reads it. A document
+    nested too deeply to be read at all is refused outright.
 
 The lists are kept narrow on purpose: accepting more later is safe, but
 refusing what was accepted would break documents already stored.
