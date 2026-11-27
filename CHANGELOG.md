@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.8.0](https://github.com/DIRACGrid/diracx/compare/v0.7.0...v0.8.0) (2026-11-11)
+
+
+### Features
+
+* **core:** feeder model ([266c1c2](https://github.com/DIRACGrid/diracx/commit/266c1c2c9fc353de172becc0dfa75be0f6f601a3))
+* **core:** feeder model proposal ([#1144](https://github.com/DIRACGrid/diracx/issues/1144)) ([266c1c2](https://github.com/DIRACGrid/diracx/commit/266c1c2c9fc353de172becc0dfa75be0f6f601a3))
+* **core:** feeder models proposal ([266c1c2](https://github.com/DIRACGrid/diracx/commit/266c1c2c9fc353de172becc0dfa75be0f6f601a3))
+* **core:** packer proposal models ([#1149](https://github.com/DIRACGrid/diracx/issues/1149)) ([8d19be1](https://github.com/DIRACGrid/diracx/commit/8d19be1ebf5b4d1b079bfc84eb70cdbaf59fce96))
+* **core:** provide hashing module for content-addressed and input objects ([#1154](https://github.com/DIRACGrid/diracx/issues/1154)) ([fd99234](https://github.com/DIRACGrid/diracx/commit/fd992340e7415486dec99e4efa3e11196bbe7141))
+* **db:** remove get_feeder_columns and adopt get_transformation method ([1300314](https://github.com/DIRACGrid/diracx/commit/130031464df97990bf7f7723e8abc8e9b79706aa))
+* **db:** transformation feeder methods ([#1145](https://github.com/DIRACGrid/diracx/issues/1145)) ([1300314](https://github.com/DIRACGrid/diracx/commit/130031464df97990bf7f7723e8abc8e9b79706aa))
+* **db:** TransformationDB queries for packing ([#1150](https://github.com/DIRACGrid/diracx/issues/1150)) ([1f9fe4f](https://github.com/DIRACGrid/diracx/commit/1f9fe4f0c55ddc32a47134b278f1d0c1b46d88e1))
+* **tasks:** replace the dummy job executor with a dummy compute backend ([3368c13](https://github.com/DIRACGrid/diracx/commit/3368c13adc36fa598d7461c57c3e97c1c22b834f))
+
+
+### Bug Fixes
+
+* **core:** tighten packer model validation and add packer entry point group ([#1170](https://github.com/DIRACGrid/diracx/issues/1170)) ([5e0a5b9](https://github.com/DIRACGrid/diracx/commit/5e0a5b94935ddc3d83d2c5e02c42545c008c9891))
+* **deps:** update dependency fastapi to &gt;=0.151.0,&lt;0.152.0 ([#1127](https://github.com/DIRACGrid/diracx/issues/1127)) ([b4d2838](https://github.com/DIRACGrid/diracx/commit/b4d283880856cecaf87470515a5df499067cf41d))
+* **deps:** update dependency pymysql to &lt;1.2.4 ([#1094](https://github.com/DIRACGrid/diracx/issues/1094)) ([000b334](https://github.com/DIRACGrid/diracx/commit/000b334938ec01ac53d1b79b1ad1fcc34ee8f013))
+* **tasks:** add async_exit_stack protection to the worker ([#1105](https://github.com/DIRACGrid/diracx/issues/1105)) ([ec7d509](https://github.com/DIRACGrid/diracx/commit/ec7d50970d6af072f9a919ad1313acc25acab29a))
+
 ## [0.7.0](https://github.com/DIRACGrid/diracx/compare/v0.6.1...v0.7.0) (2026-10-27)
 
 
