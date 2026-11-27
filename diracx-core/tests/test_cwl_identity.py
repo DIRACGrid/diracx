@@ -21,7 +21,12 @@ from diracx.core.cwl import (
     format_reference,
     subgraph,
 )
-from diracx.core.cwl.identity import _dollar_keys, _file_literals, _runs
+from diracx.core.cwl.identity import (
+    MAX_INLINE_DEPTH,
+    _dollar_keys,
+    _file_literals,
+    _runs,
+)
 
 FIXTURE = Path(__file__).parent / "fixtures" / "mc-simulation.packed.json"
 TRANSFORMATIONS = ("#gauss.cwl", "#boole-moore.cwl", "#merge.cwl")
@@ -45,6 +50,16 @@ def tool(command: str = "echo") -> dict:
         "baseCommand": [command],
         "inputs": [],
         "outputs": [],
+    }
+
+
+def workflow(run: object, entry_id: str = "#main") -> dict:
+    return {
+        "class": "Workflow",
+        "id": entry_id,
+        "inputs": [],
+        "outputs": [],
+        "steps": [{"id": f"{entry_id}/step", "in": [], "out": [], "run": run}],
     }
 
 
@@ -474,6 +489,88 @@ def test_graph_entries_without_an_id_are_refused():
             check(document)
     # A single process document needs none: it is #main
     assert entry_identity({**first, "cwlVersion": "v1.2"}, "#main")
+
+
+STEPS = "#main: steps at / are not a list or map of objects"
+INLINE_STEPS = "#main: steps at /#main/step are not a list or map of objects"
+
+
+@pytest.mark.parametrize(
+    "document, message",
+    [
+        ([tool()], "Not a CWL document"),
+        ("abc", "Not a CWL document"),
+        (None, "Not a CWL document"),
+        ({"$graph": 5}, r"\$graph is not a list of processes: 5"),
+        ({"$graph": None}, r"\$graph is not a list of processes: None"),
+        ({"$graph": [{**tool(), "class": ["Workflow"]}]}, "Not a CWL process"),
+        ({"$graph": [{**tool(), "class": {}}]}, "Not a CWL process"),
+        ({**tool(), "class": []}, "Not a CWL process"),
+        ({"$graph": [{**tool(), "id": ["#main"]}]}, "id that is not a string"),
+        ({"$graph": [{**tool(), "id": {}}]}, "id that is not a string"),
+        ({"$graph": [{**tool(), "id": 5}]}, "id that is not a string"),
+        ({**tool(), "id": []}, "id that is not a string"),
+        ({**tool(), "$namespaces": 5}, r"\$namespaces is not a map of prefixes: 5"),
+        ({**tool(), "$namespaces": [["a"]]}, r"\$namespaces is not a map"),
+        ({**tool(), "steps": "abc"}, STEPS),
+        ({**tool(), "steps": 5}, STEPS),
+        ({**tool(), "steps": True}, STEPS),
+        ({**tool(), "steps": ["a"]}, STEPS),
+        ({**tool(), "steps": [None]}, STEPS),
+        ({**tool(), "steps": [[workflow("#main")["steps"][0]]]}, STEPS),
+        ({**tool(), "steps": {"step": "#main"}}, STEPS),
+        ({"$graph": [{**tool(), "steps": "abc"}]}, STEPS),
+        (workflow({**tool(), "steps": "abc"}), INLINE_STEPS),
+        (workflow({**tool(), "steps": 5}), INLINE_STEPS),
+        (workflow({**tool(), "steps": ["a"]}), INLINE_STEPS),
+        (workflow({**tool(), "steps": {"step": "#main"}}), INLINE_STEPS),
+        (workflow({"class": ["Workflow"]}), "run at /#main/step is not a process"),
+        (workflow({"class": {}}), "run at /#main/step is not a process"),
+    ],
+)
+def test_documents_without_the_shape_of_a_packed_one_are_refused(document, message):
+    # Nothing has validated the document as CWL yet
+    if isinstance(document, dict):
+        document = {"cwlVersion": "v1.2", **document}
+    with pytest.raises(ValueError, match=message):
+        check_self_contained(document)
+
+
+def test_inline_bodies_nest_to_a_bound():
+    def nested(depth: int) -> dict:
+        process = tool()
+        for _ in range(depth):
+            process = workflow(process)
+        return {**process, "cwlVersion": "v1.2"}
+
+    check_self_contained(nested(MAX_INLINE_DEPTH))
+    assert entry_identity(nested(MAX_INLINE_DEPTH))
+    for depth in (MAX_INLINE_DEPTH + 1, 5000):
+        with pytest.raises(ValueError, match="#main: inline processes are nested"):
+            check_self_contained(nested(depth))
+
+
+@pytest.mark.parametrize("wrap", [lambda v: [v], lambda v: {"a": v}], ids=["[]", "{}"])
+def test_a_document_nested_too_deeply_to_be_read_is_refused(wrap):
+    value = "x"
+    for _ in range(5000):
+        value = wrap(value)
+    for document in (
+        {**tool(), "arguments": [value]},
+        {"cwlVersion": "v1.2", "$graph": [value]},
+    ):
+        with pytest.raises(ValueError, match="nested too deeply to be read"):
+            check_self_contained(document)
+
+
+def test_entries_running_one_another_too_deeply_to_be_hashed_are_refused():
+    # Each is a $graph entry, so the document is self-contained
+    entries = [workflow(f"#{i + 1}", f"#{i}") for i in range(5000)]
+    document = {"cwlVersion": "v1.2", "$graph": [*entries, {**tool(), "id": "#5000"}]}
+    check_self_contained(document)
+    with pytest.raises(ValueError, match="nested too deeply to be hashed"):
+        decompose(document)
+    assert subgraph(document, "#0") == document
 
 
 def test_dollar_keys_are_found_at_any_depth():
