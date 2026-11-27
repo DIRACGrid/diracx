@@ -5,6 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import event, func, insert, select
 from uuid_utils import UUID, uuid7
 
@@ -130,6 +131,15 @@ async def test_integer_feeder_already_exhausted():
         )
     ]
     assert yields == [NoMoreFeederInputs()]
+
+
+@pytest.mark.parametrize(
+    "raw_args",
+    [{}, {"max_count": 0}, {"max_count": -1}, {"maxcount": 5}],
+)
+def test_integer_feeder_args_require_positive_max_count(raw_args):
+    with pytest.raises(ValidationError, match="max_count"):
+        IntegerFeederArgs.model_validate(raw_args)
 
 
 def test_load_feeder_resolves_integer_feeder_entry_point():
