@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from diracx.db.sql.job.db import JobDB
+from diracx.db.sql.utils import fetch_in_chunks
 from sqlalchemy import insert, select
 
 from .schema import GubbinsInfo, JobDBBase
@@ -54,12 +55,15 @@ class GubbinsJobDB(JobDB):
         if not with_info:
             return jdl
 
-        stmt = select(GubbinsInfo.job_id, GubbinsInfo.info).where(
-            GubbinsInfo.job_id.in_(job_ids)
+        # Long IN lists are split into chunks, as in the parent class
+        rows = await fetch_in_chunks(
+            self.conn,
+            lambda chunk: select(GubbinsInfo.job_id, GubbinsInfo.info).where(
+                GubbinsInfo.job_id.in_(chunk)
+            ),
+            jdl,
         )
-
-        rows = await self.conn.execute(stmt)
-        info = {row[0]: row[1] for row in rows.fetchall()}
+        info = {job_id: job_info for job_id, job_info in rows}
 
         result = {}
         for job_id, jdl_details in jdl.items():

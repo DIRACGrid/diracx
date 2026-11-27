@@ -26221,7 +26221,7 @@ packages:
   - pydantic>=2.10
   - pymysql<1.2.4
   - python-dateutil
-  - sqlalchemy[aiomysql,aiosqlite]>=2
+  - sqlalchemy[aiomysql,aiosqlite]>=2.1
   - uuid-utils>=1.0.0
   - diracx-testing ; extra == 'testing'
   - freezegun ; extra == 'testing'

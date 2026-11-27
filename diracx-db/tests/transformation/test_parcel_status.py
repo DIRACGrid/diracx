@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 import pytest
 from sqlalchemy import event, insert, select
 from uuid_utils import UUID, uuid7
@@ -264,3 +266,27 @@ async def test_empty_transitions_do_nothing(transformation_db: TransformationDB)
             )
             == 0
         )
+
+
+async def test_set_parcel_status_across_chunks(
+    transformation_db: TransformationDB, transformation_id: UUID, small_chunks
+):
+    async with transformation_db as db:
+        parcels = [await add_parcel(db, transformation_id) for _ in range(4)]
+        done = await add_parcel(db, transformation_id, status=ParcelStatus.DONE)
+
+    async with transformation_db as db:
+        # The stdlib copy of a UUID is the same parcel, not a second one
+        moved = await db.set_parcel_status(
+            [*reversed(parcels), done, uuid.UUID(bytes=parcels[0].bytes)],
+            ParcelStatus.UNASSIGNED,
+            ParcelStatus.RESERVED,
+        )
+        statuses = dict(
+            (await db.conn.execute(select(Parcels.parcel_id, Parcels.status))).all()
+        )
+
+    # Returned in key order across chunks, as one ORDER BY would give
+    assert moved == sorted(parcels)
+    assert [statuses[parcel] for parcel in parcels] == [ParcelStatus.RESERVED] * 4
+    assert statuses[done] == ParcelStatus.DONE

@@ -147,7 +147,41 @@ class Owners(Base):
 </td>
 </tr>
 
+<tr>
+<td>
+
+`SQL Alchemy` (`IN` lists)
+
+</td>
+
+<td>
+
+```python
+from diracx.db.sql.utils import fetch_in_chunks
+
+rows = await fetch_in_chunks(
+    self.conn,
+    lambda chunk: select(Jobs.job_id, Jobs.status).where(Jobs.job_id.in_(chunk)),
+    job_ids,
+)
+```
+
+</td>
+
+<td>
+
+```python
+# One IN list of unbounded length
+stmt = select(Jobs.job_id, Jobs.status).where(Jobs.job_id.in_(job_ids))
+rows = await self.conn.execute(stmt)
+```
+
+</td>
+</tr>
+
 </table>
+
+When a list of values comes from the caller, use `fetch_in_chunks` for queries and `execute_in_chunks` for `UPDATE` and `DELETE`. They split the list into chunks of `IN_CHUNK_SIZE` values, because long `IN` lists make MySQL fall back to a full table scan. Splitting is only correct when each row depends on a single value: queries with `LIMIT` or aggregates across values have to stay as a single statement. Both helpers sort the values before splitting them, so concurrent transactions take their row locks in the same order. This only holds when the statement locks rows through an index on the column in the `IN` list; if the locks are ordered by another column, for example because the `IN` column has no index, keep a single statement.
 
 ## Structure
 

@@ -1,0 +1,120 @@
+"""Run statements over long lists of values in bounded ``IN (...)`` chunks."""
+
+from __future__ import annotations
+
+import uuid
+from collections.abc import Callable, Iterable, Iterator
+from typing import TYPE_CHECKING, Any, TypeVar, TypeVarTuple, Unpack
+
+import uuid_utils
+from sqlalchemy import Row, Select
+from sqlalchemy.ext.asyncio import AsyncConnection
+from sqlalchemy.sql.dml import UpdateBase
+
+from diracx.core.utils import batched
+
+if TYPE_CHECKING:
+    from _typeshed import SupportsRichComparison
+
+T = TypeVar("T", bound="SupportsRichComparison")
+Ts = TypeVarTuple("Ts")
+
+IN_CHUNK_SIZE = 999
+"""Largest number of values put in one ``IN (...)`` list.
+
+MySQL builds a range-optimiser structure for every value in an ``IN`` list
+and falls back to a full table scan once it exceeds
+``range_optimizer_max_mem_size``. MariaDB rewrites lists of
+``in_predicate_conversion_threshold`` (default 1000) or more values into a
+subquery over a temporary table, so the size stays just below that
+default. Lists of this size avoid both.
+"""
+
+
+def _sort_key(value: Any) -> Any:
+    """Compare UUIDs by their bytes, which is also how ``BinaryUUID`` sorts.
+
+    ``uuid.UUID`` and ``uuid_utils.UUID`` are both accepted as UUID values,
+    but cannot be ordered against each other and never compare equal, even
+    for the same UUID.
+    """
+    if isinstance(value, (uuid.UUID, uuid_utils.UUID)):
+        return value.bytes
+    return value
+
+
+def _chunks(values: Iterable[T], chunk_size: int | None) -> Iterator[list[T]]:
+    """Split the distinct ``values``, in sorted order, into chunks.
+
+    Sorting makes concurrent transactions take their row locks in the same
+    order, provided the statement locks through an index on the ``IN``
+    column. UUIDs are compared by their bytes.
+    """
+    # Read here rather than bound as a default, so tests can lower it
+    if chunk_size is None:
+        chunk_size = IN_CHUNK_SIZE
+    distinct: dict[Any, T] = {}
+    for value in values:
+        distinct.setdefault(_sort_key(value), value)
+    for chunk in batched(sorted(distinct), chunk_size):
+        yield [distinct[key] for key in chunk]
+
+
+async def fetch_in_chunks(
+    conn: AsyncConnection,
+    build: Callable[[list[T]], Select[Unpack[Ts]]],
+    values: Iterable[T],
+    *,
+    chunk_size: int | None = None,
+) -> list[Row[Unpack[Ts]]]:
+    """Run a query once per chunk of ``values`` and return every row.
+
+    Duplicate values are dropped and the rest are sorted before being split,
+    so ``FOR UPDATE`` locks are taken in ascending order. The result
+    is only the same as one query over all the values when each row depends
+    on a single value: no ``LIMIT``, ``OFFSET`` or aggregate across values,
+    and ``ORDER BY`` and ``DISTINCT`` only apply within a chunk.
+
+    Args:
+        conn: Connection to run the queries on.
+        build: Returns the query for one chunk, filtering on ``IN (chunk)``.
+        values: Values to filter on; nothing is run if it is empty.
+        chunk_size: Largest number of values passed to ``build`` at once;
+            ``IN_CHUNK_SIZE`` if not given.
+
+    Returns:
+        The rows of every chunk, in chunk order.
+    """
+    rows: list[Row[Unpack[Ts]]] = []
+    for chunk in _chunks(values, chunk_size):
+        rows.extend((await conn.execute(build(chunk))).all())
+    return rows
+
+
+async def execute_in_chunks(
+    conn: AsyncConnection,
+    build: Callable[[list[T]], UpdateBase],
+    values: Iterable[T],
+    *,
+    chunk_size: int | None = None,
+) -> int:
+    """Run an ``UPDATE`` or ``DELETE`` once per chunk of ``values``.
+
+    Duplicate values are dropped and the rest are sorted before being split,
+    so row locks are taken in ascending order.
+
+    Args:
+        conn: Connection to run the statements on.
+        build: Returns the statement for one chunk, filtering on
+            ``IN (chunk)``.
+        values: Values to filter on; nothing is run if it is empty.
+        chunk_size: Largest number of values passed to ``build`` at once;
+            ``IN_CHUNK_SIZE`` if not given.
+
+    Returns:
+        The sum of the row counts of every chunk.
+    """
+    rowcount = 0
+    for chunk in _chunks(values, chunk_size):
+        rowcount += (await conn.execute(build(chunk))).rowcount
+    return rowcount

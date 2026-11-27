@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import AsyncGenerator
 
 import pytest
+from sqlalchemy import event
 
 from gubbins.db.sql import GubbinsJobDB
 
@@ -55,3 +56,41 @@ async def test_gubbins_info(gubbins_db):
         assert len(result) == 1
         assert result[1].get("JDL")
         assert result[1].get("Info") == "info"
+
+
+async def test_gubbins_info_across_chunks(gubbins_db, monkeypatch):
+    """Long lists of job IDs are looked up in chunks, as in the parent class."""
+    monkeypatch.setattr("diracx.db.sql.utils.chunks.IN_CHUNK_SIZE", 2)
+    info_queries: list[str] = []
+
+    @event.listens_for(gubbins_db.engine.sync_engine, "before_cursor_execute")
+    def record(conn, cursor, statement, parameters, context, executemany):
+        if 'FROM "GubbinsInfo"' in statement:
+            info_queries.append(statement)
+
+    async with gubbins_db as db:
+        job_ids = []
+        for i in range(5):
+            job_id = await db.create_job(f"JDL{i}")
+            await db.insert_job_attributes(
+                {
+                    job_id: {
+                        "JobID": job_id,
+                        "Status": "New",
+                        "Owner": "owner",
+                        "OwnerGroup": "owner_group1",
+                        "VO": "lhcb",
+                    }
+                }
+            )
+            await db.insert_gubbins_info(job_id, f"info{i}")
+            job_ids.append(job_id)
+
+        result = await db.get_job_jdls(job_ids, original=True, with_info=True)
+
+    assert result == {
+        job_id: {"JDL": f"JDL{i}", "Info": f"info{i}"}
+        for i, job_id in enumerate(job_ids)
+    }
+    # Five jobs in chunks of two
+    assert len(info_queries) == 3
