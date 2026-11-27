@@ -20,7 +20,7 @@
       "matchManagers": [
         "helmv3"
       ],
-      "matchPackageNames": [
+      "matchDepNames": [
         "diracx"
       ],
       "schedule": [

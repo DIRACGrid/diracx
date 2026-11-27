@@ -15,19 +15,13 @@ This chart extends the base `diracx` chart by:
 ## Prerequisites
 
 - Kubernetes cluster (1.19+)
-- Helm 3.0+
-- Access to the DiracX charts repository at https://charts.diracgrid.org/
+- Helm 3.8+ (the DiracX chart is an OCI package: `oci://ghcr.io/diracgrid/diracx-charts/diracx`)
 
 ## Installation
 
-### Add the DiracX Helm repository
-
-```bash
-helm repo add diracx https://charts.diracgrid.org/
-helm repo update
-```
-
 ### Install dependencies
+
+`helm dependency build` downloads the DiracX chart from `ghcr.io`; no `helm repo add` is needed.
 
 ```bash
 helm dependency build
