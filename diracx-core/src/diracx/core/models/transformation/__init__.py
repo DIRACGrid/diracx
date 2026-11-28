@@ -23,6 +23,7 @@ __all__ = [
     "ParcelStatus",
     "SetFeederState",
     "StorageDelta",
+    "TransformationInput",
     "TransformationKind",
     "TransformationStatus",
     "WorkgraphStatus",
@@ -48,6 +49,7 @@ from .feeder import (
     NoMoreFeederInputs,
     SetFeederState,
 )
+from .input import TransformationInput
 from .packer import (
     BadInput,
     ComputeParcel,

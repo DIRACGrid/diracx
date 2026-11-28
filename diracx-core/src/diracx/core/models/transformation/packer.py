@@ -9,105 +9,84 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue
+from pydantic import Field, JsonValue
 
+from .._base import BaseModel
 from ..types import UTCDatetime
+from .input import TransformationInput
 
 
-class PackerInput(BaseModel):
-    """An ``Unassigned`` input claimed by the core and offered to a packer.
-
-    Attributes:
-        input_id: Identifier of the input.
-        parent_input_id: Input this one was split from, if any.
-        lfn: Logical file name, if the input is a file.
-        lfn_size: Size of the whole file, whatever the descriptor selects.
-        descriptor: Everything else describing the input.
-        error_count: Failed parcels the input was part of since the last reset.
-    """
-
-    model_config = ConfigDict(frozen=True)
+class PackerInput(TransformationInput):
+    """An ``Unassigned`` input claimed by the core and offered to a packer."""
 
     input_id: UUID
+    """Identifier of the input."""
     parent_input_id: UUID | None = None
-    lfn: str | None = Field(default=None, min_length=1, max_length=512)
-    lfn_size: int | None = Field(default=None, ge=0)
-    descriptor: dict[str, JsonValue] = {}
+    """Input this one was split from, if any."""
     error_count: int = Field(default=0, ge=0)
+    """Failed parcels the input was part of since the last reset."""
 
 
 class ComputeParcel(BaseModel):
-    """A packer's proposal for a parcel that runs as a job.
-
-    Attributes:
-        input_ids: Inputs the parcel is made of.
-        metadata: Free-form annotations stored on the parcel.
-        requirements: Additions merged recursively over the transformation's
-            requirements template: nested mappings are merged key by key, and
-            any other value, lists included, replaces the template's.
-        parameters: The CWL input object passed to the runner.
-    """
+    """A packer's proposal for a parcel that runs as a job."""
 
     input_ids: list[UUID] = Field(min_length=1)
+    """Inputs the parcel is made of."""
     metadata: dict[str, JsonValue] = {}
+    """Free-form annotations stored on the parcel."""
     requirements: dict[str, JsonValue] | None = None
+    """Additions merged recursively over the transformation's requirements template.
+
+    Nested mappings are merged key by key, and any other value, lists included,
+    replaces the template's.
+    """
     parameters: dict[str, JsonValue] = {}
+    """The CWL input object passed to the runner."""
 
 
 class StorageDelta(BaseModel):
-    """What a data parcel's request costs one storage element.
-
-    Attributes:
-        se: Storage element affected.
-        files: Files added there if positive, freed if negative.
-        bytes: Bytes added there if positive, freed if negative.
-    """
+    """What a data parcel's request costs one storage element."""
 
     se: str
+    """Storage element affected."""
     files: int
+    """Files added there if positive, freed if negative."""
     bytes: int
+    """Bytes added there if positive, freed if negative."""
 
 
 class DataParcel(BaseModel):
-    """A packer's proposal for a parcel that runs as a request.
-
-    Attributes:
-        input_ids: Inputs the parcel is made of.
-        metadata: Free-form annotations stored on the parcel.
-        request: DIRAC RMS request body (DX-ADR-003).
-        deltas: What the request costs each storage element.
-    """
+    """A packer's proposal for a parcel that runs as a request."""
 
     input_ids: list[UUID] = Field(min_length=1)
+    """Inputs the parcel is made of."""
     metadata: dict[str, JsonValue] = {}
+    """Free-form annotations stored on the parcel."""
     request: dict[str, JsonValue]
+    """DIRAC RMS request body (DX-ADR-003)."""
     deltas: list[StorageDelta] = []
+    """What the request costs each storage element."""
 
 
 class BadInput(BaseModel):
     """A packer's verdict that an input cannot be used at all.
 
     The core moves the input to ``Problematic`` with the reason.
-
-    Attributes:
-        input_id: The input rejected.
-        reason: Why the packer rejected it.
     """
 
     input_id: UUID
+    """The input rejected."""
     reason: str = "Unknown reason"
+    """Why the packer rejected it."""
 
 
 class DelayInput(BaseModel):
-    """A packer's request to withhold inputs from packing for a while.
-
-    Attributes:
-        input_ids: The inputs to withhold.
-        delay_until: Time before which they are not offered again.
-    """
+    """A packer's request to withhold inputs from packing for a while."""
 
     input_ids: list[UUID] = Field(min_length=1)
+    """The inputs to withhold."""
     delay_until: UTCDatetime
+    """Time before which they are not offered again."""
 
 
 PackerProposal = ComputeParcel | DataParcel | BadInput | DelayInput

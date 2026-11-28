@@ -9,13 +9,14 @@ from __future__ import annotations
 
 from typing import Self
 
-from pydantic import Field, JsonValue, model_validator
+from pydantic import JsonValue, model_validator
 
 from .._base import BaseModel
 from ..types import UTCDatetime
+from .input import TransformationInput
 
 
-class FeederInput(BaseModel):
+class FeederInput(TransformationInput):
     """One input proposed by a feeder for insertion into ``Inputs``.
 
     May be a file (``lfn`` and ``lfn_size`` both set), a seed/parameter set
@@ -23,12 +24,6 @@ class FeederInput(BaseModel):
     fills identity and status when materialising the row.
     """
 
-    descriptor: dict[str, JsonValue] = {}
-    """Opaque JSON describing the input."""
-    lfn: str | None = Field(default=None, min_length=1, max_length=512)
-    """Logical file name, or ``None`` for non-file inputs."""
-    lfn_size: int | None = Field(default=None, ge=0)
-    """Size in bytes of the whole file; required together with ``lfn``."""
     delayed_until: UTCDatetime | None = None
     """If set, the packer must not claim this input before this UTC time."""
 
